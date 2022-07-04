@@ -4,7 +4,6 @@
 
 * In this assignment, you shall implement a recommendation system for the movie's data set.
 * You can use any programming language you like.
-* ~~You can work alone or in a group of two students.~~
 * You shall present your application and code at an oral examination.
 
 ## Submission instructions
