@@ -19,22 +19,23 @@ class Program
     {
         Console.WriteLine("Welcome to the Recommendation System!");
         ReadCSVs();
-        foreach (var user in _users)
-            Console.WriteLine(user.Name);
 
-        string selectedUserName = "Mike";
-        string similarity = "Euclidean";
+        string selectedUserName = "Toby";
+        string similarity = "Pearson";
+
         int results = 3;
 
         User selectedUser = _users.Find(user => user.Name == selectedUserName);
-        var topMatchingUsers = GetTopMatchingUsers(selectedUser);
+        Func<User, User, double> similarityFunc = (similarity == "Euclidean") ? CalculateUserSimilarityEuclidean : CalculateUserSimilarityPearson;
+
+        var topMatchingUsers = GetTopMatchingUsers(selectedUser, similarityFunc);
         foreach (var userSimilarity in topMatchingUsers)
         {
-            Console.WriteLine($"{userSimilarity.Item1} : {userSimilarity.Item2}");
+            Console.WriteLine($"{userSimilarity.Item1.Name} : {userSimilarity.Item2}");
         }
     }
 
-    private static List<(User, double)> GetTopMatchingUsers(User userA)
+    private static List<(User, double)> GetTopMatchingUsers(User userA, Func<User, User, double> similarityFunc)
     {
         var list = new List<(User, double)>();
         foreach (var user in _users)
@@ -42,9 +43,9 @@ class Program
             if (user == userA)
                 continue;
 
-            list.Add((user, CalculateUserSimilarityEuclidean(userA, user)));
+            list.Add((user, similarityFunc(userA, user)));
         }
-        list.Sort((a, b) => (a.Item2 > b.Item2) ? 1 : -1);
+        list.Sort((a, b) => (a.Item2 < b.Item2) ? 1 : -1);
         return list;
     }
 
@@ -73,6 +74,42 @@ class Program
         // Calculate inverted score.
         double inverted = 1 / (1 + similarity);
         return inverted;
+    }
+
+    private static double CalculateUserSimilarityPearson(User userA, User userB)
+    {
+        // Init variables.
+        double sum1 = 0;
+        double sum2 = 0;
+        double sum1sq = 0;
+        double sum2sq = 0;
+        double pSum = 0;
+        int numberOfMatchingProducts = 0;
+        var ratingsByUserA = userA.GetRatingsByUser();
+        var ratingsByUserB = userB.GetRatingsByUser();
+        // Iterate over all rating combinations.
+        foreach (var movieRatingA in ratingsByUserA)
+        {
+            foreach (var movieRatingB in ratingsByUserB)
+            {
+                if (movieRatingA.MovieId == movieRatingB.MovieId)
+                {
+                    sum1 += movieRatingA.Rating;
+                    sum2 += movieRatingB.Rating;
+                    sum1sq += Math.Pow(movieRatingA.Rating, 2);
+                    sum2sq += Math.Pow(movieRatingB.Rating, 2);
+                    pSum += movieRatingA.Rating * movieRatingB.Rating;
+                    numberOfMatchingProducts += 1;
+                }
+            }
+        }
+        // Return 0 if no ratings in common.
+        if (numberOfMatchingProducts == 0)
+            return 0;
+        // Calculate Pearson.
+        double num = pSum - (sum1 * sum2 / numberOfMatchingProducts);
+        double den = Math.Sqrt((sum1sq - Math.Pow(sum1, 2) / numberOfMatchingProducts) * (sum2sq - Math.Pow(sum2, 2) / numberOfMatchingProducts));
+        return num / den;
     }
 
     private static void GetRecommendationsForUser(string selectedUser)
@@ -150,7 +187,7 @@ class Program
             => _users.Add(new User(Int32.Parse(values[0]), values[1])));
         ReadCSV(@"\datasets\example\movies.csv", (values)
             => _movies.Add(new Movie(Int32.Parse(values[0]), values[1], Int32.Parse(values[2]))));
-        ReadCSV(@"\datasets\example\movies.csv", (values)
+        ReadCSV(@"\datasets\example\ratings.csv", (values)
             => _movieRatings.Add(
                 new MovieRating(Int32.Parse(values[0]), Int32.Parse(values[1]), double.Parse(values[2].Replace('.', ',')))));
     }
