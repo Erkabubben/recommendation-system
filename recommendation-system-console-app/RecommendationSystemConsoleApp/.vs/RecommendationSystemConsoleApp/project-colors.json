@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "ProjectMap": {
+    "115f5001-0134-483d-99e6-1219b19f9ea7": {
+      "ProjectGuid": "115f5001-0134-483d-99e6-1219b19f9ea7",
+      "DisplayName": "RecommendationSystemConsoleApp",
+      "ColorIndex": 0
+    }
+  },
+  "NextColorIndex": 1
+}
