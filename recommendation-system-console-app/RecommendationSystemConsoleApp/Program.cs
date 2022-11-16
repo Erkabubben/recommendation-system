@@ -21,7 +21,8 @@ class Program
         ReadCSVs();
 
         string selectedUserName = "Toby";
-        string similarity = "Pearson";
+        string similarity = "Euclidean";
+        similarity = "Pearson";
 
         int results = 3;
 
@@ -30,9 +31,10 @@ class Program
 
         var topMatchingUsers = GetTopMatchingUsers(selectedUser, similarityFunc);
         foreach (var userSimilarity in topMatchingUsers)
-        {
             Console.WriteLine($"{userSimilarity.Item1.Name} : {userSimilarity.Item2}");
-        }
+        var topRecommendedMovies = GetRecommendationsForUser(selectedUser, similarityFunc);
+        foreach (var movieRecommendation in topRecommendedMovies)
+            Console.WriteLine($"{movieRecommendation.Item1.Title} : {movieRecommendation.Item2}");
     }
 
     private static List<(User, double)> GetTopMatchingUsers(User userA, Func<User, User, double> similarityFunc)
@@ -112,9 +114,64 @@ class Program
         return num / den;
     }
 
-    private static void GetRecommendationsForUser(string selectedUser)
+    private static List<(Movie, double)> GetRecommendationsForUser(User userA, Func<User, User, double> similarityFunc)
     {
+        var topMatchingUsers = GetTopMatchingUsers(userA, similarityFunc);
+        var weightedScoresTable = new double[_movies.Count, topMatchingUsers.Count];
+        var weightedScoresTotal = new double[_movies.Count];
+        var sumOfSimilarities = new double[_movies.Count];
+        var finalScores = new double[_movies.Count];
+        // Populate weighted scores table.
+        for (int y = 0; y < topMatchingUsers.Count; y++)
+        {
+            var matchingUser = topMatchingUsers[y];
+            if (matchingUser.Item2 <= 0)
+            {
+                for (int x = 0; x < _movies.Count; x++)
+                    weightedScoresTable[x, y] = -1;
+                continue;
+            }
 
+            var ratingsByUser = matchingUser.Item1.GetRatingsByUser();
+            for (int x = 0; x < _movies.Count; x++)
+            {
+                var movieRating = ratingsByUser.Find((movieRating) => movieRating.MovieId == _movies[x].Id);
+                if (movieRating != null)
+                    weightedScoresTable[x, y] = matchingUser.Item2 * movieRating.Rating;
+                else
+                    weightedScoresTable[x, y] = -1;
+            }
+        }
+        // Calculate weightedScoresTotals and similarityTotals.
+        for (int x = 0; x < _movies.Count; x++)
+        {
+            double weightedScoreTotal = 0;
+            for (int y = 0; y < topMatchingUsers.Count; y++)
+            {
+                if (weightedScoresTable[x, y] != -1)
+                    weightedScoreTotal += weightedScoresTable[x, y];
+            }
+            weightedScoresTotal[x] = weightedScoreTotal;
+
+            double similarityTotal = 0;
+            for (int y = 0; y < topMatchingUsers.Count; y++)
+            {
+                if (weightedScoresTable[x, y] != -1)
+                    similarityTotal += topMatchingUsers[y].Item2;
+            }
+            sumOfSimilarities[x] = similarityTotal;
+            finalScores[x] = weightedScoresTotal[x] / sumOfSimilarities[x];
+        }
+        // Prepare list to be returned.
+        var moviesWithScoresList = new List<(Movie, double)>();
+        var ratingsByUserA = userA.GetRatingsByUser();
+        for (int x = 0; x < _movies.Count; x++)
+        {
+            if (ratingsByUserA.FindIndex((movieRating) => movieRating.MovieId == _movies[x].Id) == -1)
+                moviesWithScoresList.Add((_movies[x], finalScores[x]));
+        }
+        moviesWithScoresList.Sort((a, b) => (a.Item2 < b.Item2) ? 1 : -1);
+        return moviesWithScoresList;
     }
 
     private class User
