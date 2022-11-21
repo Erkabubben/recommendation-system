@@ -36,13 +36,13 @@ class Program
         foreach (var movieRecommendation in topRecommendedMovies)
             Console.WriteLine($"{movieRecommendation.Item1.Title} : {movieRecommendation.Item2}");
 
-        string selectedMovieName = "Superman Returns";
+        string selectedMovieName = "\"Superman Returns\"";
         Movie selectedMovie = _movies.Find(movie => movie.Title == selectedMovieName);
         Console.WriteLine(selectedMovie.Title);
-        /*Func<Movie, Movie, double> movieSimilarityFunc = (similarity == "Euclidean") ? CalculateMovieSimilarityEuclidean : CalculateMovieSimilarityEuclidean;
-        var topMatchingMovies = GetTopMatchingMovies(movie, movieSimilarityFunc);
+        Func<Movie, Movie, double> movieSimilarityFunc = (similarity == "Euclidean") ? CalculateMovieSimilarityEuclidean : CalculateMovieSimilarityEuclidean;
+        var topMatchingMovies = GetTopMatchingMovies(selectedMovie, movieSimilarityFunc);
         foreach (var movieSimilarity in topMatchingMovies)
-            Console.WriteLine($"{movieSimilarity.Item1.Title} : {movieSimilarity.Item2}");*/
+            Console.WriteLine($"{movieSimilarity.Item1.Title} : {movieSimilarity.Item2}");
     }
 
     private static List<(User, double)> GetTopMatchingUsers(User userA, Func<User, User, double> similarityFunc)
@@ -78,9 +78,9 @@ class Program
     private static double CalculateUserSimilarityPearson(User userA, User userB)
         => CalculateSimilarityPearson(userA.GetRatingsByUser(), userB.GetRatingsByUser());
     private static double CalculateMovieSimilarityEuclidean(Movie movieA, Movie movieB)
-        => CalculateSimilarityEuclidean(movieA.GetRatingsOfMovie(), movieB.GetRatingsOfMovie());
+        => CalculateSimilarityEuclidean(movieA.GetRatingsOfMovie(), movieB.GetRatingsOfMovie(), false);
 
-    private static double CalculateSimilarityEuclidean(List<MovieRating> ratingsA, List<MovieRating> ratingsB)
+    private static double CalculateSimilarityEuclidean(List<MovieRating> ratingsA, List<MovieRating> ratingsB, bool checkMovieId = true)
     {
         // Init variables.
         double similarity = 0;
@@ -90,7 +90,7 @@ class Program
         {
             foreach (var movieRatingB in ratingsB)
             {
-                if (movieRatingA.MovieId == movieRatingB.MovieId)
+                if (checkMovieId ? movieRatingA.MovieId == movieRatingB.MovieId : movieRatingA.UserId == movieRatingB.UserId)
                 {
                     similarity += Math.Pow(movieRatingA.Rating - movieRatingB.Rating, 2);
                     numberOfMatchingProducts += 1;

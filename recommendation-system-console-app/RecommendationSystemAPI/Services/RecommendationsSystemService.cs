@@ -11,8 +11,8 @@ namespace RecommendationSystemAPI.Services
             Path.GetDirectoryName(
                 Path.GetDirectoryName(
                     Path.GetDirectoryName(
-                        (Path.GetDirectoryName(
-                            AppDomain.CurrentDomain.BaseDirectory)))));
+                        Path.GetDirectoryName(
+                            AppDomain.CurrentDomain.BaseDirectory))));
 
         private List<User> _users = new List<User>();
         private List<Movie> _movies = new List<Movie>();
