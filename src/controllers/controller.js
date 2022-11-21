@@ -54,6 +54,17 @@ export class Controller {
     res.end(await response.text())
   }
 
+  async findMovieRecommendationsItemBased (req, res, next) {
+    const response = await fetch("http://localhost:28999/Recommendations/FindMovieRecommendationsForUserItemBased", {
+        method: 'post',
+        body: await JSON.stringify(req.body),
+        headers: { 'Content-Type': 'application/json' }
+    })
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(200)
+    res.end(await response.text())
+  }
+
   async respondWithJSON (res, response) {
     res.setHeader('Content-Type', 'application/json');
     res.writeHead(200)

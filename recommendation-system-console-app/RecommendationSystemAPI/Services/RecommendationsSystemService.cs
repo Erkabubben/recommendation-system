@@ -17,10 +17,14 @@ namespace RecommendationSystemAPI.Services
         private List<User> _users = new List<User>();
         private List<Movie> _movies = new List<Movie>();
         private List<MovieRating> _movieRatings = new List<MovieRating>();
+        private double[,] _itemBasedSimilarityTableEuclidean;
+        private double[,] _itemBasedSimilarityTablePearson;
 
         public RecommendationsSystemService()
         {
             ReadCSVs();
+            _itemBasedSimilarityTableEuclidean = PreGenerateItemBasedSimilarityTable(CalculateMovieSimilarityEuclidean);
+            _itemBasedSimilarityTablePearson = PreGenerateItemBasedSimilarityTable(CalculateMovieSimilarityPearson);
         }
 
         public UserNamesListResponse GetUsersList()
@@ -55,6 +59,11 @@ namespace RecommendationSystemAPI.Services
             var selectedUser = _users.Find(user => user.Name == topMatchingUserRequest.User);
             var userSimilarityFunc = GetUserSimilarityFunc(topMatchingUserRequest);
             var topRecommendedMovies = GetRecommendationsForUser(selectedUser, userSimilarityFunc);
+            return GetMovieRecommendationsResponse(topRecommendedMovies);
+        }
+
+        private static MovieRecommendationsResponse GetMovieRecommendationsResponse(List<(Movie, double)> topRecommendedMovies)
+        {
             var movieNames = new List<string>();
             var movieIDs = new List<string>();
             var movieScores = new List<string>();
@@ -65,6 +74,106 @@ namespace RecommendationSystemAPI.Services
                 movieScores.Add(topRecommendedMovies[i].Item2.ToString());
             }
             return new MovieRecommendationsResponse(movieNames, movieIDs, movieScores);
+        }
+
+        public MovieRecommendationsResponse FindMovieRecommendationsForUserItemBased(TopMatchingUserRequest topMatchingUserRequest)
+        {
+            var selectedUser = _users.Find(user => user.Name == topMatchingUserRequest.User);
+            var preGeneratedTable = (topMatchingUserRequest.Similarity == "Euclidean")
+                ? _itemBasedSimilarityTableEuclidean : _itemBasedSimilarityTablePearson;
+            var topRecommendedMovies = GetItemBasedRecommendationsForUser(selectedUser, preGeneratedTable);
+            var movieNames = new List<string>();
+            var movieIDs = new List<string>();
+            var movieScores = new List<string>();
+            for (int i = 0; i < topRecommendedMovies.Count; i++)
+            {
+                movieNames.Add(topRecommendedMovies[i].Item1.Title);
+                movieIDs.Add(topRecommendedMovies[i].Item1.Id.ToString());
+                movieScores.Add(topRecommendedMovies[i].Item2.ToString());
+            }
+            return new MovieRecommendationsResponse(movieNames, movieIDs, movieScores);
+        }
+
+        private double GetSimilarityRatingFromPreGeneratedTable(double[,] preGeneratedTableMovie, Movie movieA, Movie movieB)
+        {
+            for (int y = 0; y < _movies.Count; y++)
+            {
+                if (_movies[y].Id == movieA.Id)
+                {
+                    for (int x = 0; x < _movies.Count; x++)
+                    {
+                        if (_movies[x].Id == movieB.Id)
+                            return preGeneratedTableMovie[x, y];
+                    }
+                }
+            }
+            return -1;
+        }
+
+        private List<(Movie, double)> GetItemBasedRecommendationsForUser(User userA, double[,] preGeneratedTable)
+        {
+            var movieRatingsByUser = userA.GetRatingsByUser(_movieRatings);
+            var similaritiesTable = new double[_movies.Count, movieRatingsByUser.Count];
+            var sumOfSimilarities = new double[_movies.Count];
+            var weightedScoresTotal = new double[_movies.Count];
+            var finalScores = new double[_movies.Count];
+            // Populate similaritiesTable.
+            for (int y = 0; y < movieRatingsByUser.Count; y++)
+            {
+                for (int x = 0; x < _movies.Count; x++)
+                    similaritiesTable[x, y] = GetSimilarityRatingFromPreGeneratedTable(preGeneratedTable, _movies[movieRatingsByUser[y].MovieId - 1], _movies[x]);
+            }
+            // Calculate weightedScoresTotals and similarityTotals.
+            for (int x = 0; x < _movies.Count; x++)
+            {
+                double similarityTotal = 0;
+                for (int y = 0; y < movieRatingsByUser.Count; y++)
+                {
+                    if (similaritiesTable[x, y] != -1)
+                        similarityTotal += similaritiesTable[x, y];
+                }
+                sumOfSimilarities[x] = similarityTotal;
+                double sumOfWeightedScoresTotal = 0;
+                for (int y = 0; y < movieRatingsByUser.Count; y++)
+                {
+                    if (similaritiesTable[x, y] != -1)
+                        sumOfWeightedScoresTotal += similaritiesTable[x, y] * movieRatingsByUser[y].Rating;
+                }
+                weightedScoresTotal[x] = sumOfWeightedScoresTotal;
+                finalScores[x] = weightedScoresTotal[x] / sumOfSimilarities[x];
+            }
+            return GetListOfMovieRecommendations(userA, finalScores);
+        }
+
+        private double[,] PreGenerateItemBasedSimilarityTable(Func<Movie, Movie, double> similarityFunc)
+        {
+            var itemBasedSimilarityTable = new double[_movies.Count, _movies.Count];
+            for (int y = 0; y < _movies.Count; y++)
+            {
+                Movie? movieA = _movies[y];
+                for (int x = 0; x < _movies.Count; x++)
+                {
+                    Movie? movieB = _movies[x];
+                    if (movieA.Id == movieB.Id)
+                        itemBasedSimilarityTable[x, y] = -1;
+                    else
+                        itemBasedSimilarityTable[x, y] = similarityFunc(movieA, movieB);
+                }
+            }
+            return itemBasedSimilarityTable;
+        }
+
+        private List<(Movie, double)> GetListOfMovieRecommendations(User userA, double[] finalScores)
+        {
+            var moviesWithScoresList = new List<(Movie, double)>();
+            var ratingsByUserA = userA.GetRatingsByUser(_movieRatings);
+            for (int x = 0; x < _movies.Count; x++)
+            {
+                if (ratingsByUserA.FindIndex((movieRating) => movieRating.MovieId == _movies[x].Id) == -1)
+                    moviesWithScoresList.Add((_movies[x], finalScores[x]));
+            }
+            moviesWithScoresList.Sort((a, b) => (a.Item2 < b.Item2) ? 1 : -1);
+            return moviesWithScoresList;
         }
 
         void Main(string[] args)
@@ -90,10 +199,6 @@ namespace RecommendationSystemAPI.Services
             string selectedMovieName = "Superman Returns";
             Movie selectedMovie = _movies.Find(movie => movie.Title == selectedMovieName);
             Console.WriteLine(selectedMovie.Title);
-            /*Func<Movie, Movie, double> movieSimilarityFunc = (similarity == "Euclidean") ? CalculateMovieSimilarityEuclidean : CalculateMovieSimilarityEuclidean;
-            var topMatchingMovies = GetTopMatchingMovies(movie, movieSimilarityFunc);
-            foreach (var movieSimilarity in topMatchingMovies)
-                Console.WriteLine($"{movieSimilarity.Item1.Title} : {movieSimilarity.Item2}");*/
         }
 
         private List<(User, double)> GetTopMatchingUsers(User userA, Func<User, User, double> similarityFunc)
@@ -129,9 +234,11 @@ namespace RecommendationSystemAPI.Services
         private double CalculateUserSimilarityPearson(User userA, User userB)
             => CalculateSimilarityPearson(userA.GetRatingsByUser(_movieRatings), userB.GetRatingsByUser(_movieRatings));
         private double CalculateMovieSimilarityEuclidean(Movie movieA, Movie movieB)
-            => CalculateSimilarityEuclidean(movieA.GetRatingsOfMovie(_movieRatings), movieB.GetRatingsOfMovie(_movieRatings));
+            => CalculateSimilarityEuclidean(movieA.GetRatingsOfMovie(_movieRatings), movieB.GetRatingsOfMovie(_movieRatings), false);
+        private double CalculateMovieSimilarityPearson(Movie movieA, Movie movieB)
+            => CalculateSimilarityPearson(movieA.GetRatingsOfMovie(_movieRatings), movieB.GetRatingsOfMovie(_movieRatings), false);
 
-        private static double CalculateSimilarityEuclidean(List<MovieRating> ratingsA, List<MovieRating> ratingsB)
+        private double CalculateSimilarityEuclidean(List<MovieRating> ratingsA, List<MovieRating> ratingsB, bool checkMovieId = true)
         {
             // Init variables.
             double similarity = 0;
@@ -141,7 +248,7 @@ namespace RecommendationSystemAPI.Services
             {
                 foreach (var movieRatingB in ratingsB)
                 {
-                    if (movieRatingA.MovieId == movieRatingB.MovieId)
+                    if (checkMovieId ? movieRatingA.MovieId == movieRatingB.MovieId : movieRatingA.UserId == movieRatingB.UserId)
                     {
                         similarity += Math.Pow(movieRatingA.Rating - movieRatingB.Rating, 2);
                         numberOfMatchingProducts += 1;
@@ -156,7 +263,7 @@ namespace RecommendationSystemAPI.Services
             return inverted;
         }
 
-        private static double CalculateSimilarityPearson(List<MovieRating> ratingsA, List<MovieRating> ratingsB)
+        private double CalculateSimilarityPearson(List<MovieRating> ratingsA, List<MovieRating> ratingsB, bool checkMovieId = true)
         {
             // Init variables.
             double sum1 = 0;
@@ -170,7 +277,7 @@ namespace RecommendationSystemAPI.Services
             {
                 foreach (var movieRatingB in ratingsB)
                 {
-                    if (movieRatingA.MovieId == movieRatingB.MovieId)
+                    if (checkMovieId ? movieRatingA.MovieId == movieRatingB.MovieId : movieRatingA.UserId == movieRatingB.UserId)
                     {
                         sum1 += movieRatingA.Rating;
                         sum2 += movieRatingB.Rating;
@@ -188,20 +295,6 @@ namespace RecommendationSystemAPI.Services
             double num = pSum - (sum1 * sum2 / numberOfMatchingProducts);
             double den = Math.Sqrt((sum1sq - Math.Pow(sum1, 2) / numberOfMatchingProducts) * (sum2sq - Math.Pow(sum2, 2) / numberOfMatchingProducts));
             return num / den;
-        }
-
-        private List<(Movie, double)> GetRecommendationsForMovie(Movie movieA, Func<User, User, double> similarityFunc)
-        {
-            var scoresTable = new double[_movies.Count, _users.Count];
-            for (int y = 0; y < _users.Count; y++)
-            {
-                for (int x = 0; x < _movies.Count; x++)
-                {
-
-                }
-            }
-
-            return null;
         }
 
         private List<(Movie, double)> GetRecommendationsForUser(User userA, Func<User, User, double> similarityFunc)
@@ -252,16 +345,7 @@ namespace RecommendationSystemAPI.Services
                 sumOfSimilarities[x] = similarityTotal;
                 finalScores[x] = weightedScoresTotal[x] / sumOfSimilarities[x];
             }
-            // Prepare list to be returned.
-            var moviesWithScoresList = new List<(Movie, double)>();
-            var ratingsByUserA = userA.GetRatingsByUser(_movieRatings);
-            for (int x = 0; x < _movies.Count; x++)
-            {
-                if (ratingsByUserA.FindIndex((movieRating) => movieRating.MovieId == _movies[x].Id) == -1)
-                    moviesWithScoresList.Add((_movies[x], finalScores[x]));
-            }
-            moviesWithScoresList.Sort((a, b) => (a.Item2 < b.Item2) ? 1 : -1);
-            return moviesWithScoresList;
+            return GetListOfMovieRecommendations(userA, finalScores);
         }
 
         private class User

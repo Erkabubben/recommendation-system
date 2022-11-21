@@ -16,6 +16,15 @@ async function button1() {
     }
 }
 
+async function button2() {
+    const responseJSON = await fetchRequest("./findMovieRecommendationsItemBased")
+    removeTableChildren()
+    addRowToTable(resultsTable, ['Movie', 'ID', 'Score'], true)
+    for (let i = 0; i < responseJSON.movies.length; i++) {
+        addRowToTable(resultsTable, [responseJSON.movies[i], responseJSON.ids[i], responseJSON.scores[i]], false)
+    }
+}
+
 async function fetchRequest (url) {
     const formDataString = await JSON.stringify(getFormData())
     const response = await fetch(url, {
@@ -53,3 +62,4 @@ function getFormData() {
 var resultsTable = document.querySelector('#results-table')
 document.querySelector('#button-find-matching-users').addEventListener('click', button0)
 document.querySelector('#button-find-movies').addEventListener('click', button1)
+document.querySelector('#button-find-movies-item').addEventListener('click', button2)
