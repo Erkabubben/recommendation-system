@@ -1,5 +1,6 @@
 # A1 - Recommendation System
 
+<!--
 ## Description
 
 * In this assignment, you shall implement a recommendation system for the movie's data set.
@@ -71,3 +72,11 @@ Here are some test cases for the larger dataset you can use to verify that your 
 * Find recommended movies for user **Angela** using **Euclidean distance**:<br />![A1-Ex1.png](.readme/A1-Ex1.png)
 * Find recommended movies for user **Will** using **Pearson similarity**:<br />![A1-Ex2.png](.readme/A1-Ex2.png)
 * Find recommended movies for user **Andy** using **Item-based filtering**:<br />![A1-Ex3.png](.readme/A1-Ex3.png)
+-->
+![Client screenshot](screenshot.jpg)
+<br>
+The Recommendation System is split into two separate web applications - <i>RecommendationSystemAPI</i> and <i>RecommendationSystemWebApplication</i>. The API is an ASP.NET REST API written in C# and is responsible for all the backend logic involved with determining movie recommendations. The RecommendationSystemWebApplication is a simple Express server and client written in JavaScript.
+## How to start the web applications
+The RecommendationSystemAPI can be used independently, but the RecommendationSystemWebApplication is dependent on the API. In order to use the client, first start the API which will then by default be accessible on http://localhost:28999/Recommendations. Then, start the RecommendationSystemWebApplication, and you should be able to access the client at https://localhost:8080/ in your web browser.
+## The console application
+A .NET console application is also included, as the Recommendation System logic was originally developed within the console app and then implemented into the API. The console app is essentially the same as the API's RecommendationSystemService class.
