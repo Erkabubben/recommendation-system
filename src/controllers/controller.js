@@ -21,7 +21,7 @@ export class Controller {
    */
   async index (req, res, next) {
     try {
-      const response = await fetch("http://localhost:28999/Recommendations/GetUsersList", {
+      const response = await fetch(process.env.API_URL + "/GetUsersList", {
         method: 'get',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -33,7 +33,7 @@ export class Controller {
   }
 
   async findTopMatchingUsers (req, res, next) {
-    const response = await fetch("http://localhost:28999/Recommendations/FindTopMatchingUsers", {
+    const response = await fetch(process.env.API_URL + "/FindTopMatchingUsers", {
         method: 'post',
         body: await JSON.stringify(req.body),
         headers: { 'Content-Type': 'application/json' }
@@ -44,7 +44,7 @@ export class Controller {
   }
 
   async findMovieRecommendationsForUser (req, res, next) {
-    const response = await fetch("http://localhost:28999/Recommendations/FindMovieRecommendationsForUser", {
+    const response = await fetch(process.env.API_URL + "/FindMovieRecommendationsForUser", {
         method: 'post',
         body: await JSON.stringify(req.body),
         headers: { 'Content-Type': 'application/json' }
@@ -55,7 +55,7 @@ export class Controller {
   }
 
   async findMovieRecommendationsItemBased (req, res, next) {
-    const response = await fetch("http://localhost:28999/Recommendations/FindMovieRecommendationsForUserItemBased", {
+    const response = await fetch(process.env.API_URL + "/FindMovieRecommendationsForUserItemBased", {
         method: 'post',
         body: await JSON.stringify(req.body),
         headers: { 'Content-Type': 'application/json' }

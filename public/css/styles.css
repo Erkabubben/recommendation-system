@@ -43,7 +43,7 @@ body {
 header {
   width: 100%;
   height: max-content;
-  background-color:	#806d19f3;
+  background-color:	#1e4346f3;
   display: grid;
   user-select: none;
   grid-template-columns: max-content auto max-content;
@@ -53,7 +53,7 @@ header {
 ;
 }
 
-.navbar-brand {
+.navbar-brand-0 {
   grid-area: brand;
   font-size: 64px;
   font-style: bold;
@@ -72,7 +72,7 @@ header ul#leftlist, header ul#rightlist {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background-color: #806d19f3;
+  background-color: #1e4346f3;
   vertical-align: middle;
 }
 
@@ -144,7 +144,7 @@ h1, h2, h3 {
 footer {
   box-sizing: border-box;
   grid-area: footer;
-  background-color:	#6a5d14f1;
+  background-color:	#387a80f3;
   position: relative;
 }
 
@@ -187,7 +187,7 @@ footer p {
 a.button-link, button.button-link {
   color: white;
   text-align: center;
-  background-color:	#806d19f3;
+  background-color:	#1e4346f3;
   text-decoration: none;
   margin: 0 0.5rem 0 0;
   padding: 0.5rem;
@@ -267,4 +267,23 @@ form button.center-button {
     padding: 0px;
     position: relative;
     margin-top: 8px;
+}
+
+table {
+  width: 100%;
+}
+
+table, th, td {
+  border: 1px solid #cacaca;
+  border-collapse: collapse;
+}
+
+table th {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background-color: #9d9d9d;
+}
+
+table td {
+  background-color: #ffffff;
 }

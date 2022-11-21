@@ -36,6 +36,7 @@ async function fetchRequest (url) {
 }
 
 function removeTableChildren() {
+    resultsTable.removeAttribute('hidden')
     while (resultsTable.lastChild !== null) {
         resultsTable.removeChild(resultsTable.lastChild)
     }
