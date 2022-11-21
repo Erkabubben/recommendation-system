@@ -20,9 +20,9 @@ namespace RecommendationSystemAPI.Services
         private double[,] _itemBasedSimilarityTableEuclidean;
         private double[,] _itemBasedSimilarityTablePearson;
 
-        public RecommendationsSystemService()
+        public RecommendationsSystemService(string nameOfDataset)
         {
-            ReadCSVs();
+            ReadCSVs(nameOfDataset);
             _itemBasedSimilarityTableEuclidean = PreGenerateItemBasedSimilarityTable(CalculateMovieSimilarityEuclidean);
             _itemBasedSimilarityTablePearson = PreGenerateItemBasedSimilarityTable(CalculateMovieSimilarityPearson);
         }
@@ -35,14 +35,14 @@ namespace RecommendationSystemAPI.Services
             return new UserNamesListResponse(userNames);
         }
 
-        private Func<User, User, double> GetUserSimilarityFunc(TopMatchingUserRequest req) =>
+        private Func<User, User, double> GetUserSimilarityFunc(UserRequest req) =>
             (req.Similarity == "Euclidean") ? CalculateUserSimilarityEuclidean : CalculateUserSimilarityPearson;
 
 
-        public TopMatchingUserResponse FindTopMatchingUsers(TopMatchingUserRequest topMatchingUserRequest)
+        public TopMatchingUserResponse FindTopMatchingUsers(UserRequest userRequest)
         {
-            var selectedUser = _users.Find(user => user.Name == topMatchingUserRequest.User);
-            var userSimilarityFunc = GetUserSimilarityFunc(topMatchingUserRequest);
+            var selectedUser = _users.Find(user => user.Name == userRequest.User);
+            var userSimilarityFunc = GetUserSimilarityFunc(userRequest);
             var topMatchingUsers = GetTopMatchingUsers(selectedUser, userSimilarityFunc);
             var users = new string[topMatchingUsers.Count];
             var similarities = new double[topMatchingUsers.Count];
@@ -51,26 +51,26 @@ namespace RecommendationSystemAPI.Services
                 users[i] = topMatchingUsers[i].Item1.Name;
                 similarities[i] = topMatchingUsers[i].Item2;
             }
-            return new TopMatchingUserResponse(users, similarities);
+            return new TopMatchingUserResponse(users, similarities, userRequest.Results);
         }
 
-        public MovieRecommendationsResponse FindMovieRecommendationsForUser(TopMatchingUserRequest topMatchingUserRequest)
+        public MovieRecommendationsResponse FindMovieRecommendationsForUser(UserRequest userRequest)
         {
-            var selectedUser = _users.Find(user => user.Name == topMatchingUserRequest.User);
-            var userSimilarityFunc = GetUserSimilarityFunc(topMatchingUserRequest);
+            var selectedUser = _users.Find(user => user.Name == userRequest.User);
+            var userSimilarityFunc = GetUserSimilarityFunc(userRequest);
             var topRecommendedMovies = GetRecommendationsForUser(selectedUser, userSimilarityFunc);
-            return GetMovieRecommendationsResponse(topRecommendedMovies);
+            return GetMovieRecommendationsResponse(topRecommendedMovies, userRequest.Results);
         }
-        public MovieRecommendationsResponse FindMovieRecommendationsForUserItemBased(TopMatchingUserRequest topMatchingUserRequest)
+        public MovieRecommendationsResponse FindMovieRecommendationsForUserItemBased(UserRequest userRequest)
         {
-            var selectedUser = _users.Find(user => user.Name == topMatchingUserRequest.User);
-            var preGeneratedTable = (topMatchingUserRequest.Similarity == "Euclidean")
+            var selectedUser = _users.Find(user => user.Name == userRequest.User);
+            var preGeneratedTable = (userRequest.Similarity == "Euclidean")
                 ? _itemBasedSimilarityTableEuclidean : _itemBasedSimilarityTablePearson;
             var topRecommendedMovies = GetItemBasedRecommendationsForUser(selectedUser, preGeneratedTable);
-            return GetMovieRecommendationsResponse(topRecommendedMovies);
+            return GetMovieRecommendationsResponse(topRecommendedMovies, userRequest.Results);
         }
 
-        private MovieRecommendationsResponse GetMovieRecommendationsResponse(List<(Movie, double)> topRecommendedMovies)
+        private MovieRecommendationsResponse GetMovieRecommendationsResponse(List<(Movie, double)> topRecommendedMovies, int maxAmount)
         {
             var movieNames = new List<string>();
             var movieIDs = new List<string>();
@@ -81,7 +81,7 @@ namespace RecommendationSystemAPI.Services
                 movieIDs.Add(topRecommendedMovies[i].Item1.Id.ToString());
                 movieScores.Add(topRecommendedMovies[i].Item2.ToString());
             }
-            return new MovieRecommendationsResponse(movieNames, movieIDs, movieScores);
+            return new MovieRecommendationsResponse(movieNames, movieIDs, movieScores, maxAmount);
         }
 
         private double GetSimilarityRatingFromPreGeneratedTable(double[,] preGeneratedTableMovie, Movie movieA, Movie movieB)
@@ -164,31 +164,6 @@ namespace RecommendationSystemAPI.Services
             }
             moviesWithScoresList.Sort((a, b) => (a.Item2 < b.Item2) ? 1 : -1);
             return moviesWithScoresList;
-        }
-
-        void Main(string[] args)
-        {
-            Console.WriteLine("Welcome to the Recommendation System!");
-
-            string selectedUserName = "Toby";
-            string similarity = "Euclidean";
-            similarity = "Pearson";
-
-            int results = 3;
-
-            User selectedUser = _users.Find(user => user.Name == selectedUserName);
-            Func<User, User, double> userSimilarityFunc = (similarity == "Euclidean") ? CalculateUserSimilarityEuclidean : CalculateUserSimilarityPearson;
-
-            var topMatchingUsers = GetTopMatchingUsers(selectedUser, userSimilarityFunc);
-            foreach (var userSimilarity in topMatchingUsers)
-                Console.WriteLine($"{userSimilarity.Item1.Name} : {userSimilarity.Item2}");
-            var topRecommendedMovies = GetRecommendationsForUser(selectedUser, userSimilarityFunc);
-            foreach (var movieRecommendation in topRecommendedMovies)
-                Console.WriteLine($"{movieRecommendation.Item1.Title} : {movieRecommendation.Item2}");
-
-            string selectedMovieName = "Superman Returns";
-            Movie selectedMovie = _movies.Find(movie => movie.Title == selectedMovieName);
-            Console.WriteLine(selectedMovie.Title);
         }
 
         private List<(User, double)> GetTopMatchingUsers(User userA, Func<User, User, double> similarityFunc)
@@ -395,7 +370,7 @@ namespace RecommendationSystemAPI.Services
             public double Rating { get => _rating; set => _rating = value; }
         }
 
-        void ReadCSVs()
+        void ReadCSVs(string nameOfDataset)
         {
             void ReadCSV(string path, Action<string[]> onReadLineAction)
             {
@@ -415,11 +390,11 @@ namespace RecommendationSystemAPI.Services
                 }
             }
 
-            ReadCSV(@"\datasets\example\users.csv", (values)
+            ReadCSV($@"\datasets\{nameOfDataset}\users.csv", (values)
                 => _users.Add(new User(Int32.Parse(values[0]), values[1])));
-            ReadCSV(@"\datasets\example\movies.csv", (values)
+            ReadCSV($@"\datasets\{nameOfDataset}\movies.csv", (values)
                 => _movies.Add(new Movie(Int32.Parse(values[0]), values[1], Int32.Parse(values[2]))));
-            ReadCSV(@"\datasets\example\ratings.csv", (values)
+            ReadCSV($@"\datasets\{nameOfDataset}\ratings.csv", (values)
                 => _movieRatings.Add(
                     new MovieRating(Int32.Parse(values[0]), Int32.Parse(values[1]), double.Parse(values[2].Replace('.', ',')))));
         }

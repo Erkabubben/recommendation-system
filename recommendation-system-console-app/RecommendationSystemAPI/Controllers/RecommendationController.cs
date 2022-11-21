@@ -13,7 +13,7 @@ namespace RecommendationSystemAPI.Controllers
 
         public RecommendationController()
         {
-            _recommendationSystemService = new RecommendationsSystemService();
+            _recommendationSystemService = new RecommendationsSystemService("large");
         }
 
         [HttpGet(Name = "Index")]
@@ -24,23 +24,23 @@ namespace RecommendationSystemAPI.Controllers
 
         // {baseURL}/api/recommendation/{methodName}
         [HttpPost][Route("FindTopMatchingUsers")]
-        public ActionResult<TopMatchingUserResponse> FindTopMatchingUsers(TopMatchingUserRequest request)
+        public ActionResult<TopMatchingUserResponse> FindTopMatchingUsers(UserRequest request)
         {
-            return _recommendationSystemService.FindTopMatchingUsers(request); ;
+            return _recommendationSystemService.FindTopMatchingUsers(request);
         }
 
         [HttpPost]
         [Route("FindMovieRecommendationsForUser")]
-        public ActionResult<MovieRecommendationsResponse> FindMovieRecommendationsForUser(TopMatchingUserRequest request)
+        public ActionResult<MovieRecommendationsResponse> FindMovieRecommendationsForUser(UserRequest request)
         {
-            return _recommendationSystemService.FindMovieRecommendationsForUser(request); ;
+            return _recommendationSystemService.FindMovieRecommendationsForUser(request);
         }
 
         [HttpPost]
         [Route("FindMovieRecommendationsForUserItemBased")]
-        public ActionResult<MovieRecommendationsResponse> FindMovieRecommendationsForUserItemBased(TopMatchingUserRequest request)
+        public ActionResult<MovieRecommendationsResponse> FindMovieRecommendationsForUserItemBased(UserRequest request)
         {
-            return _recommendationSystemService.FindMovieRecommendationsForUserItemBased(request); ;
+            return _recommendationSystemService.FindMovieRecommendationsForUserItemBased(request);
         }
 
         [HttpGet]

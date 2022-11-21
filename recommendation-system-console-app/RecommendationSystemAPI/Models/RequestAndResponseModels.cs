@@ -1,6 +1,6 @@
 ﻿namespace RecommendationSystemAPI.Models
 {
-    public class TopMatchingUserRequest
+    public class UserRequest
     {
         public string User { get; set; }
         public string Similarity { get; set; }
@@ -12,8 +12,13 @@
         public string[] Users { get; set; }
         public double[] Similarities { get; set; }
 
-        public TopMatchingUserResponse(string[] users, double[] similarities)
+        public TopMatchingUserResponse(string[] users, double[] similarities, int maxAmount = -1)
         {
+            if (maxAmount != -1)
+            {
+                Array.Resize(ref users, Math.Min(users.Length, maxAmount));
+                Array.Resize(ref similarities, Math.Min(similarities.Length, maxAmount));
+            }
             Users = users;
             Similarities = similarities;
         }
@@ -30,11 +35,18 @@
         public List<string> Movies { get; set; }
         public List<string> Ids { get; set; }
         public List<string> Scores { get; set; }
-        public MovieRecommendationsResponse(List<string> movies, List<string> ids, List<string> scores)
+        public MovieRecommendationsResponse(List<string> movies, List<string> ids, List<string> scores, int maxAmount = -1)
         {
-            Movies = movies;
-            Ids = ids;
-            Scores = scores;
+            List<T> CutList<T>(List<T> originalList, int maxAmount)
+            {
+                var newList = new List<T>();
+                for (int i = 0; i < Math.Min(originalList.Count, maxAmount); i++)
+                    newList.Add(originalList[i]);
+                return newList;
+            }
+            Movies = (maxAmount == -1) ? movies : CutList<string>(movies, maxAmount);
+            Ids = (maxAmount == -1) ? ids : CutList<string>(ids, maxAmount);
+            Scores = (maxAmount == -1) ? scores : CutList<string>(scores, maxAmount);
         }
     }
 }
