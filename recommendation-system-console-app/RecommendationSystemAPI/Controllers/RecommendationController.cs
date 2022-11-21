@@ -36,6 +36,13 @@ namespace RecommendationSystemAPI.Controllers
             return _recommendationSystemService.FindMovieRecommendationsForUser(request); ;
         }
 
+        [HttpPost]
+        [Route("FindMovieRecommendationsForUserItemBased")]
+        public ActionResult<MovieRecommendationsResponse> FindMovieRecommendationsForUserItemBased(TopMatchingUserRequest request)
+        {
+            return _recommendationSystemService.FindMovieRecommendationsForUserItemBased(request); ;
+        }
+
         [HttpGet]
         [Route("GetUsersList")]
         public ActionResult<UserNamesListResponse> GetUsersList()

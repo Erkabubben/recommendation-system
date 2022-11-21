@@ -61,27 +61,17 @@ namespace RecommendationSystemAPI.Services
             var topRecommendedMovies = GetRecommendationsForUser(selectedUser, userSimilarityFunc);
             return GetMovieRecommendationsResponse(topRecommendedMovies);
         }
-
-        private static MovieRecommendationsResponse GetMovieRecommendationsResponse(List<(Movie, double)> topRecommendedMovies)
-        {
-            var movieNames = new List<string>();
-            var movieIDs = new List<string>();
-            var movieScores = new List<string>();
-            for (int i = 0; i < topRecommendedMovies.Count; i++)
-            {
-                movieNames.Add(topRecommendedMovies[i].Item1.Title);
-                movieIDs.Add(topRecommendedMovies[i].Item1.Id.ToString());
-                movieScores.Add(topRecommendedMovies[i].Item2.ToString());
-            }
-            return new MovieRecommendationsResponse(movieNames, movieIDs, movieScores);
-        }
-
         public MovieRecommendationsResponse FindMovieRecommendationsForUserItemBased(TopMatchingUserRequest topMatchingUserRequest)
         {
             var selectedUser = _users.Find(user => user.Name == topMatchingUserRequest.User);
             var preGeneratedTable = (topMatchingUserRequest.Similarity == "Euclidean")
                 ? _itemBasedSimilarityTableEuclidean : _itemBasedSimilarityTablePearson;
             var topRecommendedMovies = GetItemBasedRecommendationsForUser(selectedUser, preGeneratedTable);
+            return GetMovieRecommendationsResponse(topRecommendedMovies);
+        }
+
+        private MovieRecommendationsResponse GetMovieRecommendationsResponse(List<(Movie, double)> topRecommendedMovies)
+        {
             var movieNames = new List<string>();
             var movieIDs = new List<string>();
             var movieScores = new List<string>();
