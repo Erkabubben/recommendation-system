@@ -7,7 +7,6 @@
  */
 
 import fetch from 'node-fetch'
-import crypto from 'crypto'
 
 /**
  * Encapsulates a controller.
@@ -21,17 +20,43 @@ export class Controller {
    * @param {Function} next - Express next middleware function.
    */
   async index (req, res, next) {
-    console.log('Called controller.index')
     try {
-      res.render('main/index')
+      const response = await fetch("http://localhost:28999/Recommendations/GetUsersList", {
+        method: 'get',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      const responseJSON = await response.json()
+      res.render('main/index', { userNames: responseJSON.userNames })
     } catch (error) {
       next(error)
     }
   }
 
   async findTopMatchingUsers (req, res, next) {
+    const response = await fetch("http://localhost:28999/Recommendations/FindTopMatchingUsers", {
+        method: 'post',
+        body: await JSON.stringify(req.body),
+        headers: { 'Content-Type': 'application/json' }
+    })
     res.setHeader('Content-Type', 'application/json');
     res.writeHead(200)
-    res.end(JSON.stringify(req.body))
+    res.end(await response.text())
+  }
+
+  async findMovieRecommendationsForUser (req, res, next) {
+    const response = await fetch("http://localhost:28999/Recommendations/FindMovieRecommendationsForUser", {
+        method: 'post',
+        body: await JSON.stringify(req.body),
+        headers: { 'Content-Type': 'application/json' }
+    })
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(200)
+    res.end(await response.text())
+  }
+
+  async respondWithJSON (res, response) {
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(200)
+    res.end(await response.text())
   }
 }

@@ -27,14 +27,22 @@ class Program
         int results = 3;
 
         User selectedUser = _users.Find(user => user.Name == selectedUserName);
-        Func<User, User, double> similarityFunc = (similarity == "Euclidean") ? CalculateUserSimilarityEuclidean : CalculateUserSimilarityPearson;
+        Func<User, User, double> userSimilarityFunc = (similarity == "Euclidean") ? CalculateUserSimilarityEuclidean : CalculateUserSimilarityPearson;
 
-        var topMatchingUsers = GetTopMatchingUsers(selectedUser, similarityFunc);
+        var topMatchingUsers = GetTopMatchingUsers(selectedUser, userSimilarityFunc);
         foreach (var userSimilarity in topMatchingUsers)
             Console.WriteLine($"{userSimilarity.Item1.Name} : {userSimilarity.Item2}");
-        var topRecommendedMovies = GetRecommendationsForUser(selectedUser, similarityFunc);
+        var topRecommendedMovies = GetRecommendationsForUser(selectedUser, userSimilarityFunc);
         foreach (var movieRecommendation in topRecommendedMovies)
             Console.WriteLine($"{movieRecommendation.Item1.Title} : {movieRecommendation.Item2}");
+
+        string selectedMovieName = "Superman Returns";
+        Movie selectedMovie = _movies.Find(movie => movie.Title == selectedMovieName);
+        Console.WriteLine(selectedMovie.Title);
+        /*Func<Movie, Movie, double> movieSimilarityFunc = (similarity == "Euclidean") ? CalculateMovieSimilarityEuclidean : CalculateMovieSimilarityEuclidean;
+        var topMatchingMovies = GetTopMatchingMovies(movie, movieSimilarityFunc);
+        foreach (var movieSimilarity in topMatchingMovies)
+            Console.WriteLine($"{movieSimilarity.Item1.Title} : {movieSimilarity.Item2}");*/
     }
 
     private static List<(User, double)> GetTopMatchingUsers(User userA, Func<User, User, double> similarityFunc)
@@ -51,17 +59,36 @@ class Program
         return list;
     }
 
+    private static List<(Movie, double)> GetTopMatchingMovies(Movie movieA, Func<Movie, Movie, double> similarityFunc)
+    {
+        var list = new List<(Movie, double)>();
+        foreach (var movie in _movies)
+        {
+            if (movie == movieA)
+                continue;
+
+            list.Add((movie, similarityFunc(movieA, movie)));
+        }
+        list.Sort((a, b) => (a.Item2 < b.Item2) ? 1 : -1);
+        return list;
+    }
+
     private static double CalculateUserSimilarityEuclidean(User userA, User userB)
+        => CalculateSimilarityEuclidean(userA.GetRatingsByUser(), userB.GetRatingsByUser());
+    private static double CalculateUserSimilarityPearson(User userA, User userB)
+        => CalculateSimilarityPearson(userA.GetRatingsByUser(), userB.GetRatingsByUser());
+    private static double CalculateMovieSimilarityEuclidean(Movie movieA, Movie movieB)
+        => CalculateSimilarityEuclidean(movieA.GetRatingsOfMovie(), movieB.GetRatingsOfMovie());
+
+    private static double CalculateSimilarityEuclidean(List<MovieRating> ratingsA, List<MovieRating> ratingsB)
     {
         // Init variables.
         double similarity = 0;
         int numberOfMatchingProducts = 0;
-        var ratingsByUserA = userA.GetRatingsByUser();
-        var ratingsByUserB = userB.GetRatingsByUser();
         // Iterate over all rating combinations.
-        foreach (var movieRatingA in ratingsByUserA)
+        foreach (var movieRatingA in ratingsA)
         {
-            foreach (var movieRatingB in ratingsByUserB)
+            foreach (var movieRatingB in ratingsB)
             {
                 if (movieRatingA.MovieId == movieRatingB.MovieId)
                 {
@@ -78,7 +105,7 @@ class Program
         return inverted;
     }
 
-    private static double CalculateUserSimilarityPearson(User userA, User userB)
+    private static double CalculateSimilarityPearson(List<MovieRating> ratingsA, List<MovieRating> ratingsB)
     {
         // Init variables.
         double sum1 = 0;
@@ -87,12 +114,10 @@ class Program
         double sum2sq = 0;
         double pSum = 0;
         int numberOfMatchingProducts = 0;
-        var ratingsByUserA = userA.GetRatingsByUser();
-        var ratingsByUserB = userB.GetRatingsByUser();
         // Iterate over all rating combinations.
-        foreach (var movieRatingA in ratingsByUserA)
+        foreach (var movieRatingA in ratingsA)
         {
-            foreach (var movieRatingB in ratingsByUserB)
+            foreach (var movieRatingB in ratingsB)
             {
                 if (movieRatingA.MovieId == movieRatingB.MovieId)
                 {
@@ -114,13 +139,25 @@ class Program
         return num / den;
     }
 
+    private static List<(Movie, double)> GetRecommendationsForMovie(Movie movieA, Func<User, User, double> similarityFunc)
+    {
+        var scoresTable = new double[_movies.Count, _users.Count];
+        for (int y = 0; y < _users.Count; y++)
+        {
+            for (int x = 0; x < _movies.Count; x++)
+            {
+
+            }
+        }
+
+        return null;
+    }
+
     private static List<(Movie, double)> GetRecommendationsForUser(User userA, Func<User, User, double> similarityFunc)
     {
         var topMatchingUsers = GetTopMatchingUsers(userA, similarityFunc);
         var weightedScoresTable = new double[_movies.Count, topMatchingUsers.Count];
-        var weightedScoresTotal = new double[_movies.Count];
-        var sumOfSimilarities = new double[_movies.Count];
-        var finalScores = new double[_movies.Count];
+
         // Populate weighted scores table.
         for (int y = 0; y < topMatchingUsers.Count; y++)
         {
@@ -131,7 +168,6 @@ class Program
                     weightedScoresTable[x, y] = -1;
                 continue;
             }
-
             var ratingsByUser = matchingUser.Item1.GetRatingsByUser();
             for (int x = 0; x < _movies.Count; x++)
             {
@@ -143,6 +179,9 @@ class Program
             }
         }
         // Calculate weightedScoresTotals and similarityTotals.
+        var weightedScoresTotal = new double[_movies.Count];
+        var sumOfSimilarities = new double[_movies.Count];
+        var finalScores = new double[_movies.Count];
         for (int x = 0; x < _movies.Count; x++)
         {
             double weightedScoreTotal = 0;
@@ -205,6 +244,17 @@ class Program
         public int Year { get => _year; set => _year = value; }
 
         public Movie(int id, string title, int year) { _id = id; _title = title; _year = year;}
+
+        public List<MovieRating> GetRatingsOfMovie()
+        {
+            var list = new List<MovieRating>();
+            foreach (var movieRating in _movieRatings)
+            {
+                if (movieRating.MovieId == Id)
+                    list.Add(movieRating);
+            }
+            return list;
+        }
     }
 
     private class MovieRating

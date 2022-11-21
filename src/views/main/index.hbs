@@ -13,8 +13,9 @@
     <form>
         <label for="users">Choose a user:</label>
         <select name="users" id="users">
-          <option value="Mike">Mike</option>
-          <option value="Toby">Toby</option>
+            {{#each userNames}}
+                <option value="{{this}}">{{this}}</option>
+            {{/each}}
         </select>
         <label for="similarity">Similarity:</label>
         <select name="similarity" id="similarity">
@@ -28,7 +29,7 @@
         <button type="button" id="button-find-movies">Find recommended movies</button>
         <button type="button" id="button-find-movies-item">Find recommendations, item-based</button>
         <br />
-        <table>
+        <table id="results-table">
             <tr>
                 <th>Movie</th>
                 <th>ID</th>

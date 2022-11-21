@@ -16,3 +16,4 @@ const controller = new Controller()
 // Map HTTP verbs and route paths to controller actions.
 router.get('/', controller.index)
 router.post('/findTopMatchingUsers', controller.findTopMatchingUsers)
+router.post('/findMovieRecommendationsForUser', controller.findMovieRecommendationsForUser)

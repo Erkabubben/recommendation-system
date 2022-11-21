@@ -14,7 +14,8 @@ import logger from 'morgan'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { router } from './routes/router.js'
-import http from 'http'
+import https from 'https'
+import fs from 'fs'
 
 /**
  * The main function of the application.
@@ -83,8 +84,6 @@ const main = async () => {
 
   app.use(session(sessionOptions))
 
-  const server = http.createServer(app)
-
   // Middleware to be executed before the routes.
   app.use((req, res, next) => {
     // Flash messages - survives only a round trip.
@@ -128,11 +127,21 @@ const main = async () => {
       .render('errors/error', { error: err, user })
   })
 
-  // Starts the HTTP server listening for connections.
-  server.listen(process.env.PORT, () => {
-    console.log(`Server running at http://localhost:${process.env.PORT}`)
+  const options = {
+    key: fs.readFileSync('cert/server.key'),
+    cert: fs.readFileSync('cert/server.crt')
+  }
+
+  const server = https.createServer(options, app).listen(process.env.PORT, () => {
+    console.log(`Server running at https://localhost:${process.env.PORT}`)
     console.log('Press Ctrl-C to terminate...')
   })
+
+  // Starts the HTTP server listening for connections.
+  /*app.listen(process.env.PORT, () => {
+    console.log(`Server running at http://localhost:${process.env.PORT}`)
+    console.log('Press Ctrl-C to terminate...')
+  })*/
 }
 
 main().catch(console.error)
